@@ -136,6 +136,28 @@ export class FlashcardsService {
     this.baseCards.update(list => [...list, newCard]);
   }
 
+  deleteCustomCard(cardId: string): void {
+    if (!cardId.startsWith('custom_')) return; // Protege cards predefinidos
+    const userId = this.auth.currentUser()?.id;
+    if (!userId) return;
+
+    const customKey = `custom-flashcards:${userId}`;
+    const customCards = this.storage.get<FlashcardRecord[]>(customKey, []);
+    const filtered = customCards.filter(c => c.id !== cardId);
+    this.storage.set(customKey, filtered);
+
+    // Remover do progresso salvo
+    const progressMap = this.storage.get<Record<string, CardProgress>>(this.progressKey(userId), {});
+    delete progressMap[cardId];
+    this.storage.set(this.progressKey(userId), progressMap);
+
+    this.baseCards.update(list => list.filter(c => c.id !== cardId));
+  }
+
+  isCustomCard(cardId: string): boolean {
+    return cardId.startsWith('custom_');
+  }
+
   private getPredefinedCards(): FlashcardRecord[] {
     const now = new Date().toISOString();
     const seeds: [string, string, string, string][] = [

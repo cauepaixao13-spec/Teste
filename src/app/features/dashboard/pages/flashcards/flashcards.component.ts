@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, signal, computed, effect } from '@angular/core';
+import { trigger, transition, style, animate } from '@angular/animations';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FlashcardsService } from '../../../../core/services/flashcards.service';
@@ -8,6 +9,17 @@ import { FlashcardRecord } from '../../../../core/models/flashcard.model';
   selector: 'app-flashcards',
   standalone: true,
   imports: [CommonModule, FormsModule],
+  animations: [
+    trigger('listAnimation', [
+      transition(':enter', [
+        style({ opacity: 0, maxHeight: '0px', overflow: 'hidden' }),
+        animate('250ms ease-out', style({ opacity: 1, maxHeight: '2000px' }))
+      ]),
+      transition(':leave', [
+        animate('200ms ease-in', style({ opacity: 0, maxHeight: '0px' }))
+      ])
+    ])
+  ],
   template: `
 <div class="page">
   <div class="page-header">
@@ -85,6 +97,114 @@ import { FlashcardRecord } from '../../../../core/models/flashcard.model';
         <button class="btn-primary" style="flex: 2;" [disabled]="availableCardsCount() === 0" (click)="startSession()">Começar revisão →</button>
       </div>
     </div>
+
+    <!-- BIBLIOTECA DE FLASHCARDS -->
+    <div class="library-section">
+      <div class="library-header">
+        <h2>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+          </svg>
+          Meus Flashcards
+        </h2>
+        <span class="library-count">{{ allCards().length }} cards</span>
+      </div>
+
+      <!-- Filtro de busca -->
+      <div class="library-search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" [ngModel]="searchFilter()" (ngModelChange)="searchFilter.set($event)" placeholder="Buscar flashcard..." />
+      </div>
+
+      <!-- Abas: Todos / Meus Cards -->
+      <div class="library-tabs">
+        <button class="tab-btn" [class.active]="libraryTab() === 'all'" (click)="libraryTab.set('all')">
+          Todos ({{ allCards().length }})
+        </button>
+        <button class="tab-btn" [class.active]="libraryTab() === 'custom'" (click)="libraryTab.set('custom')">
+          Meus Cards ({{ customCardsCount() }})
+        </button>
+      </div>
+
+      @if (filteredLibraryCards().length === 0) {
+        <div class="library-empty">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.3;">
+            <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+          </svg>
+          <p>Nenhum flashcard encontrado.</p>
+        </div>
+      } @else {
+        @for (group of groupedLibraryCards(); track group.category) {
+          <div class="lib-category">
+            <button class="lib-cat-header" (click)="toggleCategoryExpanded(group.category)">
+              <span class="lib-cat-name">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  [style.transform]="expandedCategories().has(group.category) ? 'rotate(90deg)' : 'rotate(0)'"
+                  style="transition: transform 0.2s;">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+                {{ group.category }}
+              </span>
+              <span class="lib-cat-count">{{ group.cards.length }}</span>
+            </button>
+
+            @if (expandedCategories().has(group.category)) {
+              <div class="lib-cards-list" @listAnimation>
+                @for (card of group.cards; track card.id) {
+                  <div class="lib-card-item" [class.custom]="flashcardsService.isCustomCard(card.id)">
+                    <div class="lib-card-content" (click)="togglePreview(card.id)">
+                      <div class="lib-card-question">
+                        <span class="lib-q-label">Q</span>
+                        {{ card.question }}
+                      </div>
+                      @if (previewCardId() === card.id) {
+                        <div class="lib-card-answer">
+                          <span class="lib-a-label">R</span>
+                          {{ card.answer }}
+                        </div>
+                      }
+                    </div>
+                    <div class="lib-card-actions">
+                      @if (card.stats.timesReviewed > 0) {
+                        <span class="lib-card-stat" [title]="'Revisado ' + card.stats.timesReviewed + ' vezes'">
+                          {{ card.stats.timesReviewed }}×
+                        </span>
+                      }
+                      @if (flashcardsService.isCustomCard(card.id)) {
+                        <button class="lib-delete-btn" title="Apagar flashcard" (click)="confirmDelete(card); $event.stopPropagation()">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            <line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+                          </svg>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+
+    <!-- Modal de confirmação de exclusão -->
+    @if (deletingCard()) {
+      <div class="delete-overlay" (click)="deletingCard.set(null)">
+        <div class="delete-modal" (click)="$event.stopPropagation()">
+          <div class="delete-modal-icon">🗑️</div>
+          <h3>Apagar flashcard?</h3>
+          <p class="delete-modal-question">"{{ deletingCard()!.question }}"</p>
+          <p class="delete-modal-sub">Essa ação não pode ser desfeita.</p>
+          <div class="delete-modal-actions">
+            <button class="qty-btn" (click)="deletingCard.set(null)">Cancelar</button>
+            <button class="btn-danger" (click)="executeDelete()">Apagar</button>
+          </div>
+        </div>
+      </div>
+    }
   } @else if (!finished()) {
     <div class="cards-layout">
       <div class="card-progress-wrap">
@@ -249,6 +369,143 @@ h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; }
 .c-stat.ok .c-val { color: var(--green); }
 .c-stat.warn .c-val { color: var(--amber); }
 .c-lbl { font-size: 0.78rem; color: var(--text-muted); }
+
+/* ===== LIBRARY SECTION ===== */
+.library-section {
+  margin-top: 32px; padding: 24px; border-radius: var(--radius-lg);
+  background: var(--bg-card); border: 1px solid var(--border-card);
+}
+.library-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+}
+.library-header h2 {
+  font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;
+}
+.library-count {
+  font-size: 0.78rem; color: var(--text-muted); font-weight: 600;
+  padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.05);
+}
+.library-search {
+  display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 8px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border-card); margin-bottom: 12px;
+}
+.library-search svg { color: var(--text-muted); flex-shrink: 0; }
+.library-search input {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--text-primary); font-size: 0.85rem;
+}
+.library-search input::placeholder { color: var(--text-muted); }
+
+.library-tabs {
+  display: flex; gap: 4px; margin-bottom: 16px; background: rgba(255,255,255,0.03);
+  border-radius: 8px; padding: 3px;
+}
+.tab-btn {
+  flex: 1; padding: 7px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;
+  background: transparent; border: none; color: var(--text-muted); cursor: pointer;
+  transition: all 0.2s;
+  &:hover { color: var(--text-secondary); }
+  &.active { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+}
+
+.library-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 40px; text-align: center;
+}
+.library-empty p { font-size: 0.85rem; color: var(--text-muted); }
+
+.lib-category { margin-bottom: 4px; }
+.lib-cat-header {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border-radius: 8px; background: rgba(255,255,255,0.03);
+  border: none; color: var(--text-secondary); cursor: pointer; transition: all 0.15s;
+  &:hover { background: rgba(255,255,255,0.06); }
+}
+.lib-cat-name {
+  display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600;
+}
+.lib-cat-count {
+  font-size: 0.75rem; color: var(--text-muted); font-weight: 700;
+  background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 999px;
+}
+
+.lib-cards-list {
+  display: flex; flex-direction: column; gap: 2px; padding: 4px 0 8px 0;
+  overflow: hidden;
+}
+.lib-card-item {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 10px 12px; border-radius: 6px; gap: 12px;
+  transition: background 0.15s;
+  &:hover { background: rgba(255,255,255,0.03); }
+  &.custom { border-left: 2px solid var(--accent); }
+}
+.lib-card-content {
+  flex: 1; cursor: pointer; display: flex; flex-direction: column; gap: 8px; min-width: 0;
+}
+.lib-card-question {
+  font-size: 0.84rem; color: var(--text-secondary); line-height: 1.4;
+  display: flex; gap: 8px; align-items: flex-start;
+}
+.lib-q-label {
+  flex-shrink: 0; width: 20px; height: 20px; border-radius: 4px; display: flex;
+  align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800;
+  background: rgba(96,165,250,0.15); color: #60a5fa;
+}
+.lib-card-answer {
+  font-size: 0.82rem; color: var(--text-muted); line-height: 1.4;
+  display: flex; gap: 8px; align-items: flex-start; padding-top: 4px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+  animation: fadeIn 0.2s ease;
+}
+.lib-a-label {
+  flex-shrink: 0; width: 20px; height: 20px; border-radius: 4px; display: flex;
+  align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800;
+  background: rgba(16,185,129,0.15); color: #10b981;
+}
+.lib-card-actions {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.lib-card-stat {
+  font-size: 0.72rem; color: var(--text-muted); font-weight: 600;
+}
+.lib-delete-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 6px;
+  background: transparent; border: 1px solid transparent;
+  color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+  &:hover { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.2); color: var(--red); }
+}
+
+/* Delete modal */
+.delete-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+  animation: fadeIn 0.15s ease;
+}
+.delete-modal {
+  background: var(--bg-card); border: 1px solid var(--border-card); border-radius: var(--radius-lg);
+  padding: 32px; max-width: 400px; width: 90%; text-align: center;
+  display: flex; flex-direction: column; gap: 12px; align-items: center;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+}
+.delete-modal-icon { font-size: 2rem; }
+.delete-modal h3 { font-size: 1.1rem; font-weight: 700; }
+.delete-modal-question {
+  font-size: 0.85rem; color: var(--text-muted); font-style: italic;
+  max-width: 300px; line-height: 1.4;
+}
+.delete-modal-sub { font-size: 0.78rem; color: var(--red); opacity: 0.8; }
+.delete-modal-actions { display: flex; gap: 12px; width: 100%; margin-top: 8px; }
+.delete-modal-actions .qty-btn { flex: 1; text-align: center; justify-content: center; }
+.btn-danger {
+  flex: 1; padding: 10px 20px; border-radius: 999px; font-size: 0.85rem; font-weight: 600;
+  background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: var(--red);
+  cursor: pointer; transition: all 0.2s;
+  &:hover { background: rgba(239,68,68,0.25); }
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   `]
 })
 export class FlashcardsComponent implements OnInit, OnDestroy {
@@ -262,6 +519,13 @@ export class FlashcardsComponent implements OnInit, OnDestroy {
   newCardAnswer = '';
   newCardCategory = 'Personalizado';
 
+  // Library state
+  searchFilter = signal('');
+  libraryTab = signal<'all' | 'custom'>('all');
+  expandedCategories = signal<Set<string>>(new Set());
+  previewCardId = signal<string | null>(null);
+  deletingCard = signal<FlashcardRecord | null>(null);
+
   sessionCards = signal<FlashcardRecord[]>([]);
   currentIndex = signal(0);
   showAnswer = signal(false);
@@ -273,6 +537,39 @@ export class FlashcardsComponent implements OnInit, OnDestroy {
   categories = computed(() => this.flashcardsService.categories());
   currentCard = computed(() => this.sessionCards()[this.currentIndex()]);
   finished = computed(() => this.sessionCards().length > 0 && this.currentIndex() >= this.sessionCards().length);
+
+  customCardsCount = computed(() =>
+    this.allCards().filter(c => this.flashcardsService.isCustomCard(c.id)).length
+  );
+
+  filteredLibraryCards = computed(() => {
+    let cards = this.allCards();
+    if (this.libraryTab() === 'custom') {
+      cards = cards.filter(c => this.flashcardsService.isCustomCard(c.id));
+    }
+    const filter = this.searchFilter().toLowerCase().trim();
+    if (filter) {
+      cards = cards.filter(c =>
+        c.question.toLowerCase().includes(filter) ||
+        c.answer.toLowerCase().includes(filter) ||
+        c.category.toLowerCase().includes(filter)
+      );
+    }
+    return cards;
+  });
+
+  groupedLibraryCards = computed(() => {
+    const cards = this.filteredLibraryCards();
+    const map = new Map<string, FlashcardRecord[]>();
+    for (const c of cards) {
+      const group = map.get(c.category) || [];
+      group.push(c);
+      map.set(c.category, group);
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([category, cards]) => ({ category, cards }));
+  });
 
   availableCardsCount = computed(() => {
     const selected = this.selectedCategories();
@@ -298,11 +595,21 @@ export class FlashcardsComponent implements OnInit, OnDestroy {
         }
       }
     });
+
+    // Auto-expand library categories whenever new categories appear (e.g. after service loads)
+    effect(() => {
+      const cats = this.categories();
+      if (cats.length > 0) {
+        this.expandedCategories.set(new Set(cats));
+      }
+    });
   }
 
   ngOnInit() {
     // Select all categories by default
     this.selectedCategories.set(new Set(this.categories()));
+    // Expand all categories in the library so cards are visible immediately
+    this.expandedCategories.set(new Set(this.categories()));
     const total = this.availableCardsCount();
     this.desiredCount = Math.min(10, total) || 1;
   }
@@ -352,6 +659,32 @@ export class FlashcardsComponent implements OnInit, OnDestroy {
     this.newCardQuestion = '';
     this.newCardAnswer = '';
     this.creationMode.set(false);
+  }
+
+  toggleCategoryExpanded(cat: string) {
+    const current = new Set(this.expandedCategories());
+    if (current.has(cat)) {
+      current.delete(cat);
+    } else {
+      current.add(cat);
+    }
+    this.expandedCategories.set(current);
+  }
+
+  togglePreview(cardId: string) {
+    this.previewCardId.set(this.previewCardId() === cardId ? null : cardId);
+  }
+
+  confirmDelete(card: FlashcardRecord) {
+    this.deletingCard.set(card);
+  }
+
+  executeDelete() {
+    const card = this.deletingCard();
+    if (card) {
+      this.flashcardsService.deleteCustomCard(card.id);
+      this.deletingCard.set(null);
+    }
   }
 
   revealAnswer() { this.showAnswer.set(true); }
