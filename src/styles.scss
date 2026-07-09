@@ -3,7 +3,7 @@
    ============================================ */
 
 /* ---- Google Font ---- */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+/* @import temporariamente removido para build de teste no sandbox */
 
 /* ---- CSS Custom Properties ---- */
 :root {
@@ -46,6 +46,28 @@
   /* Transitions */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --duration: 0.2s;
+}
+
+/* ---- Temas alternativos ----
+   Aplicados via [data-theme] no <html> (ver ThemeService). A escolha feita em
+   Configurações realmente muda essas variáveis — não é só um seletor decorativo. */
+html[data-theme="midnight"] {
+  --bg-deepest:    #030308;
+  --bg-dark:       #05050d;
+  --bg-main:       #07070f;
+  --bg-card:       #0c0c18;
+  --bg-card-hover: #12121f;
+  --bg-sidebar:    #040407;
+  --border-card:   rgba(255, 255, 255, 0.05);
+}
+html[data-theme="navy"] {
+  --bg-deepest:    #050a14;
+  --bg-dark:       #071022;
+  --bg-main:       #0a1830;
+  --bg-card:       #0e1f3d;
+  --bg-card-hover: #123058;
+  --bg-sidebar:    #081428;
+  --border-card:   rgba(120, 170, 255, 0.08);
 }
 
 /* ---- Reset ---- */

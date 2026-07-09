@@ -3,19 +3,18 @@ import { RouterLink, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
+import { LogoIconComponent } from '../../../shared/brand/logo-icon.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [RouterLink, CommonModule, FormsModule],
+  imports: [RouterLink, CommonModule, FormsModule, LogoIconComponent],
   template: `
 <div class="login-page">
-  <!-- Background orbs -->
   <div class="orb orb-1"></div>
   <div class="orb orb-2"></div>
   <div class="grid-bg"></div>
 
-  <!-- Back link -->
   <a routerLink="/" class="back-link">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <polyline points="15 18 9 12 15 6"/>
@@ -24,9 +23,8 @@ import { AuthService } from '../../../core/services/auth.service';
   </a>
 
   <div class="login-card">
-    <!-- Logo -->
     <div class="login-logo">
-      <div class="logo-mark">R</div>
+      <redamind-logo [size]="32"></redamind-logo>
       <span>RedalMind</span>
     </div>
 
@@ -35,17 +33,16 @@ import { AuthService } from '../../../core/services/auth.service';
 
     <form class="login-form" (ngSubmit)="onSubmit()">
       <div class="field-group">
-        <label for="username">Usuário</label>
-        <div class="input-wrap" [class.focused]="usernameFocused()">
+        <label for="email">E-mail</label>
+        <div class="input-wrap" [class.focused]="emailFocused()">
           <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
           </svg>
           <input
-            id="username" type="text" placeholder="Seu usuário"
-            [(ngModel)]="username" name="username"
-            (focus)="usernameFocused.set(true)"
-            (blur)="usernameFocused.set(false)"
-            autocomplete="username"
+            id="email" type="email" placeholder="seu@email.com"
+            [(ngModel)]="email" name="email"
+            (focus)="emailFocused.set(true)" (blur)="emailFocused.set(false)"
+            autocomplete="email"
           />
         </div>
       </div>
@@ -59,8 +56,7 @@ import { AuthService } from '../../../core/services/auth.service';
           <input
             id="password" [type]="showPass() ? 'text' : 'password'" placeholder="Sua senha"
             [(ngModel)]="password" name="password"
-            (focus)="passwordFocused.set(true)"
-            (blur)="passwordFocused.set(false)"
+            (focus)="passwordFocused.set(true)" (blur)="passwordFocused.set(false)"
             autocomplete="current-password"
           />
           <button type="button" class="toggle-pass" (click)="showPass.set(!showPass())">
@@ -97,12 +93,9 @@ import { AuthService } from '../../../core/services/auth.service';
       </button>
     </form>
 
-    <div class="login-hint">
-      <span>Credenciais de demonstração:</span>
-      <div class="hint-creds">
-        <code>Caue</code> / <code>Admin</code>
-      </div>
-    </div>
+    <p class="register-hint">
+      Ainda não tem conta? <a routerLink="/registrar">Criar conta grátis</a>
+    </p>
   </div>
 </div>
   `,
@@ -141,16 +134,7 @@ import { AuthService } from '../../../core/services/auth.service';
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
 }
 
-.login-logo {
-  display: flex; align-items: center; gap: 10px;
-  font-weight: 700; font-size: 1.1rem; margin-bottom: 32px; justify-content: center;
-}
-.logo-mark {
-  width: 32px; height: 32px; border-radius: 8px;
-  background: linear-gradient(135deg, #0080d0, var(--accent));
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 900; font-size: 1rem; color: white;
-}
+.login-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; margin-bottom: 32px; justify-content: center; }
 
 h1 { font-size: 1.5rem; font-weight: 800; text-align: center; margin-bottom: 8px; }
 .login-sub { color: var(--text-muted); text-align: center; font-size: 0.9rem; margin-bottom: 36px; }
@@ -194,17 +178,8 @@ h1 { font-size: 1.5rem; font-weight: 800; text-align: center; margin-bottom: 8px
   animation: spin 0.8s linear infinite;
 }
 
-.login-hint {
-  margin-top: 28px; padding: 16px; border-radius: var(--radius-md);
-  background: rgba(255,255,255,0.03); border: 1px solid var(--border-card);
-  text-align: center;
-  span { display: block; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px; }
-}
-.hint-creds { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.85rem; color: var(--text-secondary); }
-code {
-  padding: 3px 8px; background: rgba(0,196,255,0.1); border: 1px solid var(--border);
-  border-radius: 4px; color: var(--accent); font-family: 'Courier New', monospace; font-size: 0.85rem;
-}
+.register-hint { margin-top: 28px; text-align: center; font-size: 0.85rem; color: var(--text-muted); }
+.register-hint a { color: var(--accent); font-weight: 600; }
 
 @media (max-width: 480px) {
   .login-card { padding: 32px 24px; }
@@ -212,12 +187,12 @@ code {
   `]
 })
 export class LoginComponent {
-  username = '';
+  email = '';
   password = '';
   errorMsg = signal('');
   loading = signal(false);
   showPass = signal(false);
-  usernameFocused = signal(false);
+  emailFocused = signal(false);
   passwordFocused = signal(false);
 
   constructor(private authService: AuthService, private router: Router) {
@@ -227,21 +202,22 @@ export class LoginComponent {
   }
 
   onSubmit() {
-    if (!this.username.trim() || !this.password) {
-      this.errorMsg.set('Preencha usuário e senha.');
+    if (!this.email.trim() || !this.password) {
+      this.errorMsg.set('Preencha e-mail e senha.');
       return;
     }
     this.loading.set(true);
     this.errorMsg.set('');
 
+    // Pequeno delay artificial só pra dar a sensação de "carregando" (não há chamada de rede de verdade — tudo é LocalStorage síncrono).
     setTimeout(() => {
-      const ok = this.authService.login(this.username, this.password);
+      const result = this.authService.login(this.email, this.password);
       this.loading.set(false);
-      if (ok) {
+      if (result.success) {
         this.router.navigate(['/dashboard']);
       } else {
-        this.errorMsg.set('Usuário ou senha incorretos.');
+        this.errorMsg.set(result.error ?? 'Não foi possível entrar.');
       }
-    }, 800);
+    }, 500);
   }
 }

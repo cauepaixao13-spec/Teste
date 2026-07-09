@@ -1,17 +1,19 @@
 import { Component, OnInit, HostListener, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { LogoIconComponent } from '../../../shared/brand/logo-icon.component';
+import { CarouselComponent } from '../../../shared/carousel/carousel.component';
 
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [RouterLink, CommonModule],
+  imports: [RouterLink, CommonModule, LogoIconComponent, CarouselComponent],
   template: `
 <!-- ====== NAVBAR ====== -->
 <nav class="navbar" [class.scrolled]="scrolled()">
   <div class="nav-inner">
     <a routerLink="/" class="logo">
-      <div class="logo-mark">R</div>
+      <redamind-logo [size]="32"></redamind-logo>
       <span>RedalMind</span>
     </a>
     <ul class="nav-links" [class.open]="menuOpen()">
@@ -22,7 +24,7 @@ import { CommonModule } from '@angular/common';
     </ul>
     <div class="nav-actions">
       <a routerLink="/login" class="btn-ghost">Entrar</a>
-      <a routerLink="/login" class="btn-primary">Começar grátis →</a>
+      <a routerLink="/registrar" class="btn-primary">Começar grátis →</a>
     </div>
     <button class="hamburger" (click)="menuOpen.set(!menuOpen())">
       <span></span><span></span><span></span>
@@ -54,7 +56,7 @@ import { CommonModule } from '@angular/common';
       semana a semana, com correção por IA, métodos científicos e gamificação.
     </p>
     <div class="hero-btns">
-      <a routerLink="/login" class="btn-primary lg">Começar grátis →</a>
+      <a routerLink="/registrar" class="btn-primary lg">Começar grátis →</a>
       <a href="#metodologia" class="btn-ghost lg">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
         Ver metodologia
@@ -188,8 +190,8 @@ import { CommonModule } from '@angular/common';
   <div class="section-container">
     <p class="section-eyebrow">DEPOIMENTOS</p>
     <h2 class="section-title">Estudantes que <span class="highlight">conquistaram</span><br>a aprovação</h2>
-    <div class="testimonials-grid">
-      @for (t of testimonials; track t.name) {
+    <redamind-carousel [items]="testimonials" [itemsPerView]="3" [secondsPerItem]="4.5">
+      <ng-template let-t>
         <div class="testimonial-card card">
           <div class="stars">★★★★★</div>
           <p class="t-quote">"{{ t.quote }}"</p>
@@ -201,8 +203,8 @@ import { CommonModule } from '@angular/common';
             </div>
           </div>
         </div>
-      }
-    </div>
+      </ng-template>
+    </redamind-carousel>
   </div>
 </section>
 
@@ -234,7 +236,7 @@ import { CommonModule } from '@angular/common';
   <div class="cta-card">
     <h2>Comece sua <span class="highlight">evolução</span> hoje</h2>
     <p>Junte-se a milhares de estudantes evoluindo semana após semana.</p>
-    <a routerLink="/login" class="btn-primary lg">Entrar na plataforma →</a>
+    <a routerLink="/registrar" class="btn-primary lg">Entrar na plataforma →</a>
   </div>
 </section>
 
@@ -243,7 +245,7 @@ import { CommonModule } from '@angular/common';
   <div class="footer-inner">
     <div class="footer-brand">
       <div class="logo">
-        <div class="logo-mark">R</div>
+        <redamind-logo [size]="32"></redamind-logo>
         <span>RedalMind</span>
       </div>
       <p>Transformando escrita em aprovação. A plataforma inteligente para evoluir sua redação com IA educacional e ciência da aprendizagem.</p>
@@ -293,12 +295,6 @@ import { CommonModule } from '@angular/common';
   display: flex; align-items: center; gap: 32px; height: 68px;
 }
 .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; color: var(--text-primary); flex-shrink: 0; }
-.logo-mark {
-  width: 32px; height: 32px; border-radius: 8px;
-  background: linear-gradient(135deg, #0080d0, var(--accent));
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 900; font-size: 1rem; color: white;
-}
 .nav-links { display: flex; align-items: center; gap: 28px; margin-left: auto; }
 .nav-links li a { color: var(--text-secondary); font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
 .nav-links li a:hover { color: var(--text-primary); }
@@ -419,8 +415,8 @@ import { CommonModule } from '@angular/common';
 
 /* ===== TESTIMONIALS ===== */
 .testimonials-section { padding: 100px 24px; }
-.testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 56px; }
-.testimonial-card { padding: 28px; }
+redamind-carousel { display: block; margin-top: 56px; padding: 0 28px; }
+.testimonial-card { padding: 28px; height: 100%; display: flex; flex-direction: column; }
 .stars { color: var(--accent); font-size: 1rem; margin-bottom: 16px; letter-spacing: 2px; }
 .t-quote { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.7; margin-bottom: 24px; font-style: italic; }
 .t-author { display: flex; align-items: center; gap: 12px; }
@@ -489,7 +485,6 @@ import { CommonModule } from '@angular/common';
   .stat-item { padding: 0 16px; }
   .features-grid { grid-template-columns: 1fr 1fr; }
   .method-steps { grid-template-columns: 1fr; }
-  .testimonials-grid { grid-template-columns: 1fr; }
   .footer-inner { grid-template-columns: 1fr; gap: 32px; }
   .footer-bottom { flex-direction: column; gap: 8px; text-align: center; }
   .cta-card { padding: 40px 24px; }
@@ -537,6 +532,9 @@ export class LandingComponent implements OnInit {
     { quote: 'Sai de 640 para 940 em 3 meses. O feedback da IA é absolutamente preciso.', name: 'Mariana Lopes', detail: 'Aprovada em Medicina — UFMG' },
     { quote: 'Os desafios semanais criaram uma rotina que eu nunca consegui ter sozinha.', name: 'Lucas Andrade', detail: 'Aprovado em Direito — USP' },
     { quote: 'O sistema de competências me ajudou a entender exatamente o que melhorar.', name: 'Júlia Tavares', detail: 'Aprovada em Engenharia — UFRJ' },
+    { quote: 'Os flashcards de repertório salvaram minha redação sobre temas que eu não dominava.', name: 'Pedro Henrique Costa', detail: 'Aprovado em Administração — UFBA' },
+    { quote: 'Nunca tinha visto uma correção tão detalhada competência por competência.', name: 'Beatriz Nogueira', detail: 'Aprovada em Psicologia — UFPE' },
+    { quote: 'O ranking com os amigos virou motivação diária pra não perder o streak.', name: 'Rafael Souza', detail: 'Aprovado em Ciência da Computação — UFRGS' },
   ];
 
   faqItems = [

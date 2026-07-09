@@ -1,18 +1,22 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { DataService } from '../../../../core/services/data.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { FlashcardsService } from '../../../../core/services/flashcards.service';
+import { LineChartComponent } from '../../../../shared/charts/line-chart.component';
+import { RadarChartComponent, RadarAxis } from '../../../../shared/charts/radar-chart.component';
 
 @Component({
   selector: 'app-visao-geral',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, LineChartComponent, RadarChartComponent],
   template: `
 <div class="page">
   <!-- Header -->
   <div class="page-header">
     <div>
-      <p class="page-eyebrow">Olá estudante 👋</p>
+      <p class="page-eyebrow">Olá, {{ authService.currentUser()?.displayName || 'estudante' }} 👋</p>
       <h1>Sua jornada para a <span class="highlight">aprovação</span></h1>
     </div>
     <a routerLink="/dashboard/desafio-semanal" class="btn-primary">
@@ -26,7 +30,7 @@ import { DataService } from '../../../../core/services/data.service';
       <div class="stat-icon fire">🔥</div>
       <div class="stat-body">
         <span class="stat-label">Streak</span>
-        <span class="stat-value">7 dias</span>
+        <span class="stat-value">{{ flashcardsService.streak() }} dia(s)</span>
       </div>
     </div>
     <div class="stat-card">
@@ -35,7 +39,7 @@ import { DataService } from '../../../../core/services/data.service';
       </div>
       <div class="stat-body">
         <span class="stat-label">Nível</span>
-        <span class="stat-value">Lv. 12</span>
+        <span class="stat-value">Lv. {{ flashcardsService.level() }}</span>
       </div>
     </div>
     <div class="stat-card">
@@ -46,8 +50,8 @@ import { DataService } from '../../../../core/services/data.service';
         </svg>
       </div>
       <div class="stat-body">
-        <span class="stat-label">Redações</span>
-        <span class="stat-value">14</span>
+        <span class="stat-label">Flashcards revisados</span>
+        <span class="stat-value">{{ flashcardsService.totalReviews() }}</span>
       </div>
     </div>
     <div class="stat-card">
@@ -58,7 +62,7 @@ import { DataService } from '../../../../core/services/data.service';
       </div>
       <div class="stat-body">
         <span class="stat-label">XP Total</span>
-        <span class="stat-value">2.480</span>
+        <span class="stat-value">{{ flashcardsService.totalXp() | number:'1.0-0' }}</span>
       </div>
     </div>
   </div>
@@ -70,41 +74,13 @@ import { DataService } from '../../../../core/services/data.service';
       <div class="chart-header">
         <div>
           <h3>Evolução da nota</h3>
-          <p class="chart-sub">Últimas 7 semanas</p>
+          <p class="chart-sub">Últimas {{ gradeHistory.length }} semanas</p>
         </div>
-        <span class="trend-badge positive">+200 pts</span>
+        <span class="trend-badge positive">+{{ gradeGain }} pts</span>
       </div>
-      <div class="line-chart-wrap">
-        <svg viewBox="0 0 400 150" class="line-chart" preserveAspectRatio="none">
-          <!-- Grid lines -->
-          <line x1="0" y1="30"  x2="400" y2="30"  stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-          <line x1="0" y1="60"  x2="400" y2="60"  stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-          <line x1="0" y1="90"  x2="400" y2="90"  stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-          <line x1="0" y1="120" x2="400" y2="120" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-          <!-- Gradient fill -->
-          <defs>
-            <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="rgba(0,196,255,0.3)"/>
-              <stop offset="100%" stop-color="rgba(0,196,255,0)"/>
-            </linearGradient>
-          </defs>
-          <path d="M 0,130 L 44,120 L 88,100 L 133,85 L 177,70 L 222,55 L 266,40 L 311,32 L 355,22 L 400,18 L 400,150 L 0,150 Z"
-                fill="url(#lineGrad)"/>
-          <!-- Line -->
-          <path d="M 0,130 L 44,120 L 88,100 L 133,85 L 177,70 L 222,55 L 266,40 L 311,32 L 355,22 L 400,18"
-                fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <!-- Dots -->
-          @for (pt of linePoints; track pt.x) {
-            <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="3.5" fill="var(--accent)" stroke="var(--bg-card)" stroke-width="2"/>
-          }
-        </svg>
-        <!-- X labels -->
-        <div class="x-labels">
-          @for (lbl of ['S1','S2','S3','S4','S5','S6','S7']; track lbl) {
-            <span>{{ lbl }}</span>
-          }
-        </div>
-      </div>
+      <redamind-line-chart [data]="gradeHistory" [labels]="weekLabels" [width]="400" [height]="150"
+                            color="var(--accent)">
+      </redamind-line-chart>
     </div>
 
     <!-- Radar Chart -->
@@ -116,28 +92,7 @@ import { DataService } from '../../../../core/services/data.service';
         </div>
       </div>
       <div class="radar-wrap">
-        <svg viewBox="0 0 200 200" class="radar-chart">
-          <defs>
-            <radialGradient id="radarFill" cx="50%" cy="50%">
-              <stop offset="0%" stop-color="rgba(0,196,255,0.4)"/>
-              <stop offset="100%" stop-color="rgba(0,128,208,0.15)"/>
-            </radialGradient>
-          </defs>
-          <!-- Background rings -->
-          @for (ring of [70,56,42,28,14]; track ring) {
-            <polygon [attr.points]="getPentagonPoints(ring)" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-          }
-          <!-- Axes -->
-          @for (axis of axisEndpoints; track axis.x2) {
-            <line x1="100" y1="100" [attr.x2]="axis.x2" [attr.y2]="axis.y2" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-          }
-          <!-- Data polygon -->
-          <polygon [attr.points]="radarDataPoints" fill="url(#radarFill)" stroke="var(--accent)" stroke-width="2"/>
-          <!-- Labels -->
-          @for (lbl of radarLabels; track lbl.text) {
-            <text [attr.x]="lbl.x" [attr.y]="lbl.y" text-anchor="middle" fill="rgba(148,163,184,0.9)" font-size="9" font-family="Inter, sans-serif">{{ lbl.text }}</text>
-          }
-        </svg>
+        <redamind-radar-chart [axes]="competenciaAxes" color="var(--accent)" [size]="200"></redamind-radar-chart>
       </div>
     </div>
   </div>
@@ -223,15 +178,8 @@ h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; }
 .trend-badge { padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
 .trend-badge.positive { background: rgba(16,185,129,0.12); color: var(--green); border: 1px solid rgba(16,185,129,0.2); }
 
-.line-chart-wrap { }
-.line-chart { width: 100%; height: 150px; display: block; }
-.x-labels {
-  display: flex; justify-content: space-between; padding: 8px 0 0;
-  font-size: 0.68rem; color: var(--text-muted);
-}
-
 .radar-wrap { display: flex; align-items: center; justify-content: center; padding: 8px 0; }
-.radar-chart { width: 180px; height: 180px; display: block; }
+.radar-wrap redamind-radar-chart { width: 180px; height: 180px; display: block; }
 
 .actions-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .action-card { padding: 20px; display: flex; flex-direction: column; gap: 14px; cursor: pointer; transition: border-color 0.2s, transform 0.2s; }
@@ -265,48 +213,36 @@ h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; }
   `]
 })
 export class VisaoGeralComponent implements OnInit {
-  linePoints = [
-    { x: 0, y: 130 }, { x: 44, y: 120 }, { x: 88, y: 100 }, { x: 133, y: 85 },
-    { x: 177, y: 70 }, { x: 222, y: 55 }, { x: 266, y: 40 }, { x: 311, y: 32 },
-    { x: 355, y: 22 }, { x: 400, y: 18 }
-  ];
+  // NOTA: nota/competências do ENEM continuam sendo dados de EXEMPLO — o app
+  // ainda não tem um motor de correção de redação por IA que gere esses
+  // números de verdade. Streak, nível, XP e flashcards revisados (acima) já
+  // são 100% reais, calculados a partir da atividade registrada no FlashcardsService.
+  gradeHistory: number[] = [];
+  weekLabels: string[] = [];
+  gradeGain = 0;
+  competenciaAxes: RadarAxis[] = [];
 
-  radarLabels = [
-    { text: 'C1', x: 100, y: 18 },
-    { text: 'C2', x: 180, y: 74 },
-    { text: 'C3', x: 150, y: 182 },
-    { text: 'C4', x: 50,  y: 182 },
-    { text: 'C5', x: 20,  y: 74 },
-  ];
+  private readonly compLabels = ['C1', 'C2', 'C3', 'C4', 'C5'];
 
-  axisEndpoints = [
-    { x2: 100, y2: 30 },
-    { x2: 167, y2: 77 },
-    { x2: 140, y2: 170 },
-    { x2: 60,  y2: 170 },
-    { x2: 33,  y2: 77 },
-  ];
-
-  radarDataPoints = '';
-
-  scores = [0.9, 0.8, 0.9, 0.6, 0.8]; // C1-C5 as fractions
-
-  constructor(private dataService: DataService) {}
+  constructor(
+    private dataService: DataService,
+    public authService: AuthService,
+    public flashcardsService: FlashcardsService,
+  ) {}
 
   ngOnInit() {
-    const cx = 100, cy = 100, maxR = 70;
-    const angles = [-Math.PI/2, -Math.PI/2 + 2*Math.PI/5, -Math.PI/2 + 4*Math.PI/5,
-                    -Math.PI/2 + 6*Math.PI/5, -Math.PI/2 + 8*Math.PI/5];
-    this.radarDataPoints = this.scores.map((s, i) => {
-      const r = s * maxR;
-      return `${cx + r * Math.cos(angles[i])},${cy + r * Math.sin(angles[i])}`;
-    }).join(' ');
-  }
+    const evo = this.dataService.getEvolutionData();
+    const exampleStats = this.dataService.getUserStats();
 
-  getPentagonPoints(r: number): string {
-    const cx = 100, cy = 100;
-    const angles = [-Math.PI/2, -Math.PI/2 + 2*Math.PI/5, -Math.PI/2 + 4*Math.PI/5,
-                    -Math.PI/2 + 6*Math.PI/5, -Math.PI/2 + 8*Math.PI/5];
-    return angles.map(a => `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`).join(' ');
+    // Últimas 7 semanas de nota (dado de exemplo, ver nota acima)
+    this.gradeHistory = evo.gradeHistory.slice(-7);
+    this.weekLabels = this.gradeHistory.map((_, i) => `S${i + 1}`);
+    this.gradeGain = this.gradeHistory[this.gradeHistory.length - 1] - this.gradeHistory[0];
+
+    // Competências (0-100 -> fração 0-1 para o radar; dado de exemplo, ver nota acima)
+    this.competenciaAxes = exampleStats.competencias.map((v, i) => ({
+      label: this.compLabels[i] ?? `C${i + 1}`,
+      value: v / 100
+    }));
   }
 }
